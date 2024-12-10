@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    #restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_SSL: DISABLED
+      SSL_ENFORCE: 0
+      DISABLE_SSL_DEFAULT: 1
+      SSLMODE: DISABLED
+    ports:
+      - "3306:3306"
+    networks:
+      - my-network
+    volumes:
+      - db_data:/var/lib/mysql
+    command:
+      --require-secure-transport=OFF 
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    #restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_ABSOLUTE_URI: http://localhost:8081
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+      PMA_SSL: 0
+    networks:
+      - my-network
+    depends_on:
+      - mysql
+
+  app:
+    container_name: backend
+    #restart: always
+    build:
+      context: ../Backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/Fodraszat?useSSL=false&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+      - my-network
+    depends_on:
+      - mysql
+
+  frontend:
+    container_name: frontend
+    #restart: always
+    build:
+      context: ../Frontend/Frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    networks:
+      - my-network
+    depends_on:
+      - app
+
+networks:
+  my-network:
+    driver: bridge
+
+volumes:
+  db_data:
